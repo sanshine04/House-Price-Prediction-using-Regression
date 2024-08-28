@@ -1,0 +1,85 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+import matplotlib.pyplot as plt
+
+csv_file_path = input("Enter the path to your CSV file: ")
+
+try:
+    # Load the CSV file with comma separators and ensure header is read
+    data = pd.read_csv(csv_file_path, sep=',', encoding='ISO-8859-1')
+    print("CSV file loaded successfully!")
+except FileNotFoundError:
+    print("File not found. Please check the file path.")
+    exit()
+except pd.errors.EmptyDataError:
+    print("No data found in the file. Please check the file content.")
+    exit()
+except pd.errors.ParserError:
+    print("Error parsing the file. Please check the file format.")
+    exit()
+except OSError as e:
+    print(f"Error loading file: {e}")
+    exit()
+
+print("Here are the first few rows of your dataset:")
+print(data.head())
+
+# Print original column names
+print("Original Column names:", data.columns)
+
+# Check if the dataset has only one column due to incorrect parsing
+if len(data.columns) == 1:
+    print("Single column issue detected. Attempting to fix...")
+    # Attempt to reload the CSV with correct parameters
+    data = pd.read_csv(csv_file_path, sep=',', header=None)
+    # Set correct column names if necessary
+    data.columns = ['Rooms', 'Size (sq ft)', 'Age (years)', 'Location', 'Price ($)']
+    print("Column names have been manually set.")
+
+print("Corrected Column names:", data.columns)
+
+# Proceed with model training and evaluation
+x = data[['Rooms', 'Size (sq ft)', 'Age (years)', 'Location']]
+y = data['Price ($)']
+
+# Convert categorical 'Location' column to dummy variables
+x = pd.get_dummies(x, columns=['Location'], drop_first=True)
+
+# Split data into training and testing sets
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+
+# Initialize and fit the model
+model = LinearRegression()
+model.fit(x_train, y_train)
+
+# Make predictions
+y_pred = model.predict(x_test)
+
+# Calculate metrics
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print(f'MSE: {mse}')
+print(f'R-squared: {r2}')
+
+# Plot Actual vs Predicted Prices
+plt.figure(figsize=(10, 6))
+plt.scatter(y_test, y_pred, color='blue', edgecolor='k', alpha=0.7)
+plt.plot([y.min(), y.max()], [y.min(), y.max()], 'r--', lw=3)
+plt.xlabel('Actual Prices')
+plt.ylabel('Predicted Prices')
+plt.title('Actual vs Predicted Prices')
+plt.grid(True)
+plt.show()
+
+# Plot Residuals
+plt.figure(figsize=(10, 6))
+plt.scatter(y_pred, y_test - y_pred, color='green', edgecolor='k', alpha=0.7)
+plt.hlines(y=0, xmin=y_pred.min(), xmax=y_pred.max(), color='red', linestyles='dashed')
+plt.xlabel('Predicted Prices')
+plt.ylabel('Residuals')
+plt.title('Residual Plot')
+plt.grid(True)
+plt.show()
